@@ -17,18 +17,25 @@ export default function InvoiceDetailPage() {
     const router = useRouter();
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState(true);
+    const [docMode, setDocMode] = useState<"invoice" | "receipt" | "tax-invoice">("invoice");
 
     const componentRef = useRef(null);
 
     const handlePrint = useReactToPrint({
         content: () => componentRef.current,
-        documentTitle: `Invoice-${invoice?.number}`,
+        documentTitle: `${docMode === 'receipt' ? 'Receipt' : 'Invoice'}-${invoice?.number}`,
     });
 
     useEffect(() => {
         if (params.id) {
             getInvoiceById(params.id as string)
-                .then(setInvoice)
+                .then((data) => {
+                    setInvoice(data);
+                    // Default to receipt if paid
+                    if (data?.status === 'paid') {
+                        setDocMode("receipt");
+                    }
+                })
                 .catch((err) => console.error(err))
                 .finally(() => setLoading(false));
         }
@@ -42,15 +49,43 @@ export default function InvoiceDetailPage() {
         return <div className="text-center mt-10">ไม่พบใบแจ้งหนี้</div>;
     }
 
+    const docTitle = docMode === "invoice" ? "ใบแจ้งหนี้" : docMode === "receipt" ? "ใบเสร็จรับเงิน" : "ใบกำกับภาษี/ใบเสร็จรับเงิน";
+    const docEnglish = docMode === "invoice" ? "Invoice" : docMode === "receipt" ? "Receipt" : "Tax Invoice / Receipt";
+
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-10">
             {/* Toolbar */}
-            <div className="flex items-center justify-between no-print">
-                <Button variant="outline" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> กลับ
-                </Button>
+            <div className="flex items-center justify-between no-print bg-white p-4 rounded-lg border shadow-sm">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" onClick={() => router.back()}>
+                        <ArrowLeft className="mr-2 h-4 w-4" /> กลับ
+                    </Button>
+                    <div className="flex bg-slate-100 p-1 rounded-md">
+                        <Button
+                            variant={docMode === "invoice" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => setDocMode("invoice")}
+                        >
+                            ใบแจ้งหนี้
+                        </Button>
+                        <Button
+                            variant={docMode === "receipt" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => setDocMode("receipt")}
+                        >
+                            ใบเสร็จ
+                        </Button>
+                        <Button
+                            variant={docMode === "tax-invoice" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => setDocMode("tax-invoice")}
+                        >
+                            ใบกำกับภาษี
+                        </Button>
+                    </div>
+                </div>
                 <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
-                    <Printer className="mr-2 h-4 w-4" /> พิมพ์ใบแจ้งหนี้
+                    <Printer className="mr-2 h-4 w-4" /> พิมพ์{docTitle}
                 </Button>
             </div>
 
@@ -76,7 +111,8 @@ export default function InvoiceDetailPage() {
                             </p>
                         </div>
                         <div className="text-right">
-                            <h2 className="text-4xl font-bold text-slate-200 uppercase tracking-widest mb-4">Invoice</h2>
+                            <h2 className="text-4xl font-bold text-slate-200 uppercase tracking-widest mb-2 leading-none">{docEnglish}</h2>
+                            <h3 className="text-xl font-bold text-slate-400 mb-4">{docTitle}</h3>
                             <div className="space-y-1 text-sm">
                                 <div className="flex justify-end gap-4">
                                     <span className="font-semibold text-slate-600">เลขที่เอกสาร:</span>
@@ -86,10 +122,12 @@ export default function InvoiceDetailPage() {
                                     <span className="font-semibold text-slate-600">วันที่:</span>
                                     <span>{format(invoice.date, "d MMMM yyyy", { locale: th })}</span>
                                 </div>
-                                <div className="flex justify-end gap-4">
-                                    <span className="font-semibold text-slate-600">วันครบกำหนด:</span>
-                                    <span>{format(invoice.dueDate, "d MMMM yyyy", { locale: th })}</span>
-                                </div>
+                                {docMode === "invoice" && (
+                                    <div className="flex justify-end gap-4">
+                                        <span className="font-semibold text-slate-600">วันครบกำหนด:</span>
+                                        <span>{format(invoice.dueDate, "d MMMM yyyy", { locale: th })}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

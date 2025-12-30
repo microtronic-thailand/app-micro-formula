@@ -1,0 +1,48 @@
+name: Release Application
+
+on:
+  push:
+    tags:
+      - 'v*' # เมื่อคุณสร้าง Tag เช่น v1.0.0 ระบบจะทำงานอัตโนมัติ
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build production app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_NAME: "Micro Account"
+          # ใส่ตัวแปรที่จำเป็นในการ Build ตรงนี้
+
+      - name: Create Release Package
+        run: |
+          mkdir release-package
+          cp -r .next release-package/
+          cp -r public release-package/
+          cp package.json release-package/
+          cp package-lock.json release-package/
+          cp docker-compose.yml release-package/
+          cp START_WINDOWS.bat release-package/
+          cp START_LINUX.sh release-package/
+          cp README.md release-package/
+          zip -r micro-account-dist.zip release-package
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: micro-account-dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

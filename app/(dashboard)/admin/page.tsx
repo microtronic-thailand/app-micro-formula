@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     getAllProfiles,
-    updateUserRole
+    updateUserRole,
+    toggleForcePassword
 } from "@/lib/data-service";
 import { Profile, UserRole } from "@/types";
 import { useProfile } from "@/hooks/use-profile";
@@ -77,12 +78,7 @@ export default function AdminDashboardPage() {
 
     async function handleToggleForcePassword(userId: string, currentStatus: boolean) {
         try {
-            const { supabase } = await import('@/lib/supabase');
-            await supabase
-                .from('profiles')
-                .update({ must_change_password: !currentStatus })
-                .eq('id', userId);
-
+            await toggleForcePassword(userId, currentStatus);
             toast.success(!currentStatus ? "บังคับเปลี่ยนรหัสผ่านแล้ว" : "ยกเลิกการบังคับเปลี่ยนรหัสผ่านแล้ว");
             loadProfiles();
         } catch (error) {

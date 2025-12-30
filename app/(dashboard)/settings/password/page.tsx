@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { supabase } from "@/lib/supabase";
+import { changePassword } from "@/lib/data-service";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -43,21 +43,10 @@ export default function ChangePasswordPage() {
     });
 
     async function onSubmit(values: z.infer<typeof schema>) {
+        if (!profile) return;
         setLoading(true);
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: values.password
-            });
-
-            if (error) throw error;
-
-            // Clear force change flag in profile
-            if (profile) {
-                await supabase
-                    .from('profiles')
-                    .update({ must_change_password: false })
-                    .eq('id', profile.id);
-            }
+            await changePassword(profile.id, values.password);
 
             toast.success("เปลี่ยนรหัสผ่านเรียบร้อยแล้ว");
             router.push("/dashboard");

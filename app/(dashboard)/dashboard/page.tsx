@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getInvoices, getExpenses, getProducts } from "@/lib/data-service";
 import { Invoice, Expense, Product } from "@/types";
-import { DollarSign, CreditCard, Users, TrendingUp, Loader2, AlertTriangle, Box } from "lucide-react";
+import { DollarSign, CreditCard, Users, TrendingUp, Loader2, AlertTriangle, Box, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -73,9 +75,18 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">พื้นที่ทำงาน (Workspace)</h2>
-                <p className="text-muted-foreground">สรุปข้อมูลทางการเงินและสถานะบริษัทของคุณ</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight">พื้นที่ทำงาน (Workspace)</h2>
+                    <p className="text-muted-foreground">สรุปข้อมูลทางการเงินและสถานะบริษัทของคุณ</p>
+                </div>
+                <div className="flex gap-2">
+                    <Link href="/reports/financial">
+                        <Button variant="outline" size="sm" className="hidden sm:flex">
+                            <TrendingUp className="mr-2 h-4 w-4 text-blue-500" /> ดูรายงานสรุปฉบับเต็ม
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

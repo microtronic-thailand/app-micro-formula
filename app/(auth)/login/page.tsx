@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
+import { localLogin, localRegister } from "@/lib/data-service";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -51,9 +52,27 @@ export default function LoginPage() {
         },
     });
 
+    const isLocal = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('localhost') || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_USE_LOCAL_DB === 'true';
+
     async function onLogin(values: z.infer<typeof authSchema>) {
         setIsLoading(true);
         try {
+            if (isLocal) {
+                // REAL LOCAL LOGIN via Docker Postgres
+                const profile = await localLogin(values.email);
+                const mockUser = {
+                    id: profile.id,
+                    email: profile.email,
+                    aud: 'authenticated',
+                    role: 'authenticated',
+                    created_at: profile.createdAt
+                };
+                localStorage.setItem('local_user', JSON.stringify(mockUser));
+                toast.success("เข้าสู่ระบบเรียบร้อย (Docker Local)");
+                router.push("/dashboard");
+                return;
+            }
+
             const { error } = await supabase.auth.signInWithPassword({
                 email: values.email,
                 password: values.password,
@@ -67,8 +86,8 @@ export default function LoginPage() {
             toast.success("เข้าสู่ระบบสำเร็จ");
             router.push("/dashboard");
             router.refresh();
-        } catch (error) {
-            toast.error("เกิดข้อผิดพลาดบางอย่าง");
+        } catch (error: any) {
+            toast.error(error.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
         } finally {
             setIsLoading(false);
         }
@@ -77,6 +96,14 @@ export default function LoginPage() {
     async function onRegister(values: z.infer<typeof authSchema>) {
         setIsLoading(true);
         try {
+            if (isLocal) {
+                // REAL LOCAL REGISTER via Docker Postgres
+                await localRegister(values.email);
+                toast.success("สมัครสมาชิกสำเร็จ (Docker Local)");
+                await onLogin(values);
+                return;
+            }
+
             const { error } = await supabase.auth.signUp({
                 email: values.email,
                 password: values.password,
@@ -88,14 +115,10 @@ export default function LoginPage() {
             }
 
             toast.success("สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน (ถ้ามี) หรือลองเข้าสู่ระบบ");
-            // If email confirmation is disabled, user is logged in automatically usually?
-            // Or we check session.
-            // For now, let's keep them on page or auto login.
-            // Let's try to login immediately after sign up just in case
             await onLogin(values);
 
-        } catch (error) {
-            toast.error("เกิดข้อผิดพลาดบางอย่าง");
+        } catch (error: any) {
+            toast.error(error.message || "เกิดข้อผิดพลาดในการสมัครสมาชิก");
         } finally {
             setIsLoading(false);
         }

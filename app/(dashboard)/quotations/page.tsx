@@ -25,6 +25,9 @@ export default function QuotationsPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
+    const [dateStart, setDateStart] = useState("");
+    const [dateEnd, setDateEnd] = useState("");
+
     const fetchQuotations = async () => {
         try {
             setLoading(true);
@@ -57,10 +60,16 @@ export default function QuotationsPage() {
         }
     };
 
-    const filteredQuotations = quotations.filter((q) =>
-        q.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredQuotations = quotations.filter((q) => {
+        const matchesSearch = q.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            q.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const qDate = new Date(q.date).getTime();
+        const matchesStart = dateStart ? qDate >= new Date(dateStart).getTime() : true;
+        const matchesEnd = dateEnd ? qDate <= new Date(dateEnd).getTime() : true;
+
+        return matchesSearch && matchesStart && matchesEnd;
+    });
 
     return (
         <div className="space-y-6">
@@ -78,7 +87,7 @@ export default function QuotationsPage() {
                 </Link>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -87,6 +96,26 @@ export default function QuotationsPage() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                </div>
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="date"
+                        className="w-40"
+                        value={dateStart}
+                        onChange={(e) => setDateStart(e.target.value)}
+                    />
+                    <span className="text-slate-400">-</span>
+                    <Input
+                        type="date"
+                        className="w-40"
+                        value={dateEnd}
+                        onChange={(e) => setDateEnd(e.target.value)}
+                    />
+                    {(dateStart || dateEnd) && (
+                        <Button variant="ghost" size="sm" onClick={() => { setDateStart(""); setDateEnd(""); }}>
+                            ล้าง
+                        </Button>
+                    )}
                 </div>
             </div>
 

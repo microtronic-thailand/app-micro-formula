@@ -13,7 +13,8 @@ import {
     Shield,
     Database,
     BookOpen,
-    Tags
+    Tags,
+    TrendingUp
 } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 
@@ -90,6 +91,15 @@ export function Sidebar() {
                         >
                             <ClipboardList size={20} />
                             รายงานภาษี (Tax Reports)
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            href="/reports/financial"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                        >
+                            <TrendingUp size={20} />
+                            สรุปยอดรายวัน (Finance)
                         </Link>
                     </li>
                     {profile?.role === 'super_admin' && (

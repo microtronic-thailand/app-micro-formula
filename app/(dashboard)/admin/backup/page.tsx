@@ -15,7 +15,7 @@ import {
     History,
     FileJson
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { exportData, importData } from "@/lib/data-service";
 import { Separator } from "@/components/ui/separator";
 
 const TABLES = [
@@ -47,13 +47,7 @@ export default function BackupPage() {
     const handleExport = async () => {
         setIsExporting(true);
         try {
-            const backupData: Record<string, any> = {};
-
-            for (const table of TABLES) {
-                const { data, error } = await supabase.from(table).select("*");
-                if (error) throw error;
-                backupData[table] = data;
-            }
+            const backupData = await exportData();
 
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -90,22 +84,9 @@ export default function BackupPage() {
             reader.onload = async (e) => {
                 try {
                     const data = JSON.parse(e.target?.result as string);
+                    toast.loading(`กำลังนำเข้าข้อมูล...`, { id: 'import-status' });
 
-                    // Order matters for foreign keys
-                    // 1. Independent tables
-                    const firstOrder = ["profiles", "customers", "products", "settings", "announcements"];
-                    // 2. Dependent tables
-                    const secondOrder = ["invoices", "quotations", "expenses"];
-                    // 3. Line items
-                    const thirdOrder = ["invoice_items", "quotation_items"];
-
-                    for (const table of [...firstOrder, ...secondOrder, ...thirdOrder]) {
-                        if (data[table] && Array.isArray(data[table])) {
-                            toast.loading(`กำลังนำเข้าตาราง ${table}...`, { id: 'import-status' });
-                            const { error } = await supabase.from(table).upsert(data[table]);
-                            if (error) throw new Error(`Error in ${table}: ${error.message}`);
-                        }
-                    }
+                    await importData(data);
 
                     toast.success("นำเข้าข้อมูลสำรองสำเร็จแล้ว ระบบจะรีโหลดเพื่อความถูกต้อง", { id: 'import-status' });
                     setTimeout(() => window.location.reload(), 2000);

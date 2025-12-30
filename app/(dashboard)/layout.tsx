@@ -8,6 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { Loader2, Menu, X } from "lucide-react";
 import { updateActivity } from "@/lib/data-service";
 import { Button } from "@/components/ui/button";
+import { LicenseGuard } from "@/components/layout/license-guard";
 
 export default function DashboardLayout({
     children,
@@ -81,7 +82,9 @@ export default function DashboardLayout({
             <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
                 <Header onMobileMenuClick={() => setSidebarOpen(true)} />
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                    {children}
+                    <LicenseGuard>
+                        {children}
+                    </LicenseGuard>
                 </main>
             </div>
         </div>

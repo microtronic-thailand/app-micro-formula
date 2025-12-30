@@ -37,6 +37,9 @@ export default function ExpensesPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
+    const [dateStart, setDateStart] = useState("");
+    const [dateEnd, setDateEnd] = useState("");
+
     const fetchExpenses = async () => {
         try {
             setLoading(true);
@@ -65,13 +68,19 @@ export default function ExpensesPage() {
         fetchExpenses();
     }, []);
 
-    const filteredExpenses = expenses.filter((e) =>
-        e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.recipient?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredExpenses = expenses.filter((e) => {
+        const matchesSearch = e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.recipient?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const totalStats = expenses.reduce((sum, e) => sum + e.amount, 0);
+        const expDate = new Date(e.date).getTime();
+        const matchesStart = dateStart ? expDate >= new Date(dateStart).getTime() : true;
+        const matchesEnd = dateEnd ? expDate <= new Date(dateEnd).getTime() : true;
+
+        return matchesSearch && matchesStart && matchesEnd;
+    });
+
+    const totalStats = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     return (
         <div className="space-y-6">
@@ -89,7 +98,7 @@ export default function ExpensesPage() {
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">รวมรายจ่ายทั้งหมด</CardTitle>
+                        <CardTitle className="text-sm font-medium">รวมรายจ่าย (ตามตัวกรอง)</CardTitle>
                         <Wallet className="h-4 w-4 text-red-500" />
                     </CardHeader>
                     <CardContent>
@@ -97,13 +106,13 @@ export default function ExpensesPage() {
                             ฿{totalStats.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            จำนวน {expenses.length} รายการ
+                            จำนวน {filteredExpenses.length} รายการ
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -112,6 +121,26 @@ export default function ExpensesPage() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                </div>
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="date"
+                        className="w-40"
+                        value={dateStart}
+                        onChange={(e) => setDateStart(e.target.value)}
+                    />
+                    <span className="text-slate-400">-</span>
+                    <Input
+                        type="date"
+                        className="w-40"
+                        value={dateEnd}
+                        onChange={(e) => setDateEnd(e.target.value)}
+                    />
+                    {(dateStart || dateEnd) && (
+                        <Button variant="ghost" size="sm" onClick={() => { setDateStart(""); setDateEnd(""); }}>
+                            ล้าง
+                        </Button>
+                    )}
                 </div>
             </div>
 
