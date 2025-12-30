@@ -75,7 +75,7 @@ export default function CreateInvoicePage() {
     const nextInvoiceNumber = `INV-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
     const form = useForm<InvoiceFormValues>({
-        resolver: zodResolver(invoiceSchema),
+        resolver: zodResolver(invoiceSchema) as any,
         defaultValues: {
             number: nextInvoiceNumber,
             date: new Date(),

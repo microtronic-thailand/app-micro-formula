@@ -216,6 +216,10 @@ export async function getExpenses() {
             category: e.category,
             date: new Date(e.date),
             recipient: e.recipient,
+            receiptUrl: e.receipt_url,
+            paymentStatus: e.payment_status,
+            isReconciled: e.is_reconciled,
+            whtAmount: Number(e.wht_amount || 0),
             createdAt: new Date(e.created_at)
         })) as Expense[];
     }
@@ -232,19 +236,45 @@ export async function getExpenses() {
 
     return data.map((e: any) => ({
         ...e,
+        id: e.id,
+        description: e.description,
+        amount: Number(e.amount),
         isVat: e.is_vat,
-        vatAmount: e.vat_amount
+        vatAmount: Number(e.vat_amount),
+        category: e.category,
+        date: new Date(e.date),
+        recipient: e.recipient,
+        receiptUrl: e.receipt_url,
+        paymentStatus: e.payment_status,
+        isReconciled: e.is_reconciled,
+        whtAmount: Number(e.wht_amount || 0)
     })) as Expense[];
 }
 
 export async function createExpense(expense: Partial<Expense>) {
     if (USE_LOCAL) {
         const result = await sql`
-            INSERT INTO expenses (description, amount, is_vat, vat_amount, category, date, recipient)
-            VALUES (${expense.description}, ${expense.amount}, ${expense.isVat || false}, ${expense.vatAmount || 0}, ${expense.category}, ${expense.date}, ${expense.recipient})
+            INSERT INTO expenses (
+                description, amount, is_vat, vat_amount, 
+                category, date, recipient, receipt_url, 
+                payment_status, is_reconciled, wht_amount
+            )
+            VALUES (
+                ${expense.description || null}, ${expense.amount || 0}, ${expense.isVat || false}, ${expense.vatAmount || 0}, 
+                ${expense.category || null}, ${expense.date || new Date()}, ${expense.recipient || null}, ${expense.receiptUrl || null}, 
+                ${expense.paymentStatus || 'paid'}, ${expense.isReconciled || false}, ${expense.whtAmount || 0}
+            )
             RETURNING *
         `;
-        return result[0] as Expense;
+        const newExpense = result[0] as Expense;
+        await logAudit({
+            action: 'CREATE',
+            entityType: 'EXPENSE',
+            entityId: newExpense.id.toString(),
+            details: `สร้างรายจ่าย: ${expense.description} จำนวน ฿${expense.amount}`,
+            newData: newExpense
+        });
+        return newExpense;
     }
 
     const { data, error } = await supabase
@@ -256,7 +286,11 @@ export async function createExpense(expense: Partial<Expense>) {
             vat_amount: expense.vatAmount,
             category: expense.category,
             date: expense.date,
-            recipient: expense.recipient
+            recipient: expense.recipient,
+            receipt_url: expense.receiptUrl,
+            payment_status: expense.paymentStatus || 'paid',
+            is_reconciled: expense.isReconciled || false,
+            wht_amount: expense.whtAmount || 0
         }])
         .select()
         .single();
@@ -266,12 +300,82 @@ export async function createExpense(expense: Partial<Expense>) {
         throw error;
     }
 
-    return data as Expense;
+    const newExpense = data as Expense;
+    await logAudit({
+        action: 'CREATE',
+        entityType: 'EXPENSE',
+        entityId: newExpense.id.toString(),
+        details: `สร้างรายจ่าย: ${expense.description} จำนวน ฿${expense.amount}`,
+        newData: newExpense
+    });
+    return newExpense;
+}
+
+export async function updateExpense(id: string, updates: Partial<Expense>) {
+    if (USE_LOCAL) {
+        // Map to snake_case for local SQL
+        const snakeUpdates: any = {};
+        if (updates.description !== undefined) snakeUpdates.description = updates.description;
+        if (updates.amount !== undefined) snakeUpdates.amount = updates.amount;
+        if (updates.isVat !== undefined) snakeUpdates.is_vat = updates.isVat;
+        if (updates.vatAmount !== undefined) snakeUpdates.vat_amount = updates.vatAmount;
+        if (updates.category !== undefined) snakeUpdates.category = updates.category;
+        if (updates.date !== undefined) snakeUpdates.date = updates.date;
+        if (updates.recipient !== undefined) snakeUpdates.recipient = updates.recipient;
+        if (updates.receiptUrl !== undefined) snakeUpdates.receipt_url = updates.receiptUrl;
+        if (updates.paymentStatus !== undefined) snakeUpdates.payment_status = updates.paymentStatus;
+        if (updates.isReconciled !== undefined) snakeUpdates.is_reconciled = updates.isReconciled;
+        if (updates.whtAmount !== undefined) snakeUpdates.wht_amount = updates.whtAmount;
+
+        if (Object.keys(snakeUpdates).length === 0) return;
+
+        await sql`UPDATE expenses SET ${sql(snakeUpdates)} WHERE id = ${id}`;
+        await logAudit({
+            action: 'UPDATE',
+            entityType: 'EXPENSE',
+            entityId: id,
+            details: `แก้ไขรายจ่าย ID: ${id}`,
+            newData: updates
+        });
+        return;
+    }
+
+    // Supabase mapping
+    const supabaseUpdates: any = { ...updates };
+    if (updates.isVat !== undefined) { supabaseUpdates.is_vat = updates.isVat; delete supabaseUpdates.isVat; }
+    if (updates.vatAmount !== undefined) { supabaseUpdates.vat_amount = updates.vatAmount; delete supabaseUpdates.vatAmount; }
+    if (updates.receiptUrl !== undefined) { supabaseUpdates.receipt_url = updates.receiptUrl; delete supabaseUpdates.receiptUrl; }
+    if (updates.paymentStatus !== undefined) { supabaseUpdates.payment_status = updates.paymentStatus; delete supabaseUpdates.paymentStatus; }
+    if (updates.isReconciled !== undefined) { supabaseUpdates.is_reconciled = updates.isReconciled; delete supabaseUpdates.isReconciled; }
+    if (updates.whtAmount !== undefined) { supabaseUpdates.wht_amount = updates.whtAmount; delete supabaseUpdates.whtAmount; }
+
+    const { error } = await supabase
+        .from('expenses')
+        .update(supabaseUpdates)
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error updating expense:', error);
+        throw error;
+    }
+    await logAudit({
+        action: 'UPDATE',
+        entityType: 'EXPENSE',
+        entityId: id,
+        details: `แก้ไขรายจ่าย ID: ${id}`,
+        newData: updates
+    });
 }
 
 export async function deleteExpense(id: string) {
     if (USE_LOCAL) {
         await sql`DELETE FROM expenses WHERE id = ${id}`;
+        await logAudit({
+            action: 'DELETE',
+            entityType: 'EXPENSE',
+            entityId: id,
+            details: `ลบรายจ่าย ID: ${id}`
+        });
         return;
     }
 
@@ -284,6 +388,12 @@ export async function deleteExpense(id: string) {
         console.error('Error deleting expense:', error);
         throw error;
     }
+    await logAudit({
+        action: 'DELETE',
+        entityType: 'EXPENSE',
+        entityId: id,
+        details: `ลบรายจ่าย ID: ${id}`
+    });
 }
 
 // --- Products ---
@@ -329,7 +439,7 @@ export async function createProduct(product: Partial<Product>) {
     if (USE_LOCAL) {
         const result = await sql`
             INSERT INTO products (name, sku, price, unit, description, stock_quantity, min_stock_level, category)
-            VALUES (${product.name}, ${product.sku}, ${product.price}, ${product.unit}, ${product.description}, ${product.stockQuantity || 0}, ${product.minStockLevel || 0}, 'general')
+            VALUES (${product.name || ''}, ${product.sku || null}, ${product.price || 0}, ${product.unit || 'ชิ้น'}, ${product.description || null}, ${product.stockQuantity || 0}, ${product.minStockLevel || 0}, 'general')
             RETURNING *
         `;
         const newProduct = result[0];
@@ -342,6 +452,14 @@ export async function createProduct(product: Partial<Product>) {
                 notes: 'สต็อกเริ่มต้น'
             });
         }
+
+        await logAudit({
+            action: 'CREATE',
+            entityType: 'PRODUCT',
+            entityId: newProduct.id.toString(),
+            details: `เพิ่มสินค้าใหม่: ${product.name} (SKU: ${product.sku})`,
+            newData: newProduct
+        });
 
         return newProduct;
     }
@@ -376,6 +494,14 @@ export async function createProduct(product: Partial<Product>) {
         });
     }
 
+    await logAudit({
+        action: 'CREATE',
+        entityType: 'PRODUCT',
+        entityId: data.id.toString(),
+        details: `เพิ่มสินค้าใหม่: ${product.name} (SKU: ${product.sku})`,
+        newData: data
+    });
+
     return data as Product;
 }
 
@@ -383,15 +509,22 @@ export async function updateProduct(id: string, product: Partial<Product>) {
     if (USE_LOCAL) {
         await sql`
             UPDATE products 
-            SET name = ${product.name}, 
-                sku = ${product.sku}, 
-                price = ${product.price}, 
-                unit = ${product.unit}, 
-                description = ${product.description}, 
+            SET name = ${product.name || ''}, 
+                sku = ${product.sku || null}, 
+                price = ${product.price || 0}, 
+                unit = ${product.unit || ''}, 
+                description = ${product.description || null}, 
                 min_stock_level = ${product.minStockLevel || 0},
                 updated_at = ${new Date()}
             WHERE id = ${id}
         `;
+        await logAudit({
+            action: 'UPDATE',
+            entityType: 'PRODUCT',
+            entityId: id,
+            details: `แก้ไขข้อมูลสินค้า ID: ${id}`,
+            newData: product
+        });
         return;
     }
 
@@ -414,6 +547,12 @@ export async function updateProduct(id: string, product: Partial<Product>) {
 export async function deleteProduct(id: string) {
     if (USE_LOCAL) {
         await sql`DELETE FROM products WHERE id = ${id}`;
+        await logAudit({
+            action: 'DELETE',
+            entityType: 'PRODUCT',
+            entityId: id,
+            details: `ลบสินค้า ID: ${id}`
+        });
         return;
     }
 
@@ -426,6 +565,12 @@ export async function deleteProduct(id: string) {
         console.error('Error deleting product:', error);
         throw error;
     }
+    await logAudit({
+        action: 'DELETE',
+        entityType: 'PRODUCT',
+        entityId: id,
+        details: `ลบสินค้า ID: ${id}`
+    });
 }
 
 // --- Customers ---
@@ -453,10 +598,18 @@ export async function createCustomer(customer: Partial<Customer>) {
     if (USE_LOCAL) {
         const result = await sql`
             INSERT INTO customers (name, tax_id, address, email, phone, branch)
-            VALUES (${customer.name}, ${customer.taxId}, ${customer.address}, ${customer.email}, ${customer.phone}, ${customer.branch})
+            VALUES (${customer.name || ''}, ${customer.taxId || null}, ${customer.address || null}, ${customer.email || null}, ${customer.phone || null}, ${customer.branch || null})
             RETURNING *
         `;
-        return result[0] as Customer;
+        const newCustomer = result[0] as Customer;
+        await logAudit({
+            action: 'CREATE',
+            entityType: 'CUSTOMER',
+            entityId: newCustomer.id.toString(),
+            details: `เพิ่มลูกค้าใหม่: ${customer.name}`,
+            newData: newCustomer
+        });
+        return newCustomer;
     }
 
     const { data, error } = await supabase
@@ -477,6 +630,14 @@ export async function createCustomer(customer: Partial<Customer>) {
         throw error;
     }
 
+    await logAudit({
+        action: 'CREATE',
+        entityType: 'CUSTOMER',
+        entityId: data.id.toString(),
+        details: `เพิ่มลูกค้าใหม่: ${customer.name}`,
+        newData: data
+    });
+
     return data as Customer;
 }
 
@@ -484,15 +645,22 @@ export async function updateCustomer(id: string, customer: Partial<Customer>) {
     if (USE_LOCAL) {
         await sql`
             UPDATE customers
-            SET name = ${customer.name},
-                tax_id = ${customer.taxId},
-                address = ${customer.address},
-                email = ${customer.email},
-                phone = ${customer.phone},
-                branch = ${customer.branch},
+            SET name = ${customer.name || ''},
+                tax_id = ${customer.taxId || null},
+                address = ${customer.address || null},
+                email = ${customer.email || null},
+                phone = ${customer.phone || null},
+                branch = ${customer.branch || null},
                 updated_at = ${new Date()}
             WHERE id = ${id}
         `;
+        await logAudit({
+            action: 'UPDATE',
+            entityType: 'CUSTOMER',
+            entityId: id,
+            details: `แก้ไขข้อมูลลูกค้า: ${customer.name}`,
+            newData: customer
+        });
         return;
     }
 
@@ -567,7 +735,7 @@ export async function createInvoice(invoice: Invoice) {
         // Use a transaction if possible, but at least use sql
         const invResult = await sql`
             INSERT INTO invoices (number, date, due_date, customer_id, customer_name, customer_address, customer_tax_id, subtotal, discount_total, vat_total, grand_total, status, notes)
-            VALUES (${invoice.number}, ${invoice.date}, ${invoice.dueDate}, ${invoice.customerId}, ${invoice.customerName}, ${invoice.customerAddress}, ${invoice.customerTaxId}, ${invoice.subtotal}, ${invoice.discountTotal}, ${invoice.vatTotal}, ${invoice.grandTotal}, ${invoice.status}, ${invoice.notes})
+            VALUES (${invoice.number}, ${invoice.date}, ${invoice.dueDate}, ${invoice.customerId}, ${invoice.customerName}, ${invoice.customerAddress || null}, ${invoice.customerTaxId || null}, ${invoice.subtotal}, ${invoice.discountTotal}, ${invoice.vatTotal}, ${invoice.grandTotal}, ${invoice.status}, ${invoice.notes || null})
             RETURNING id
         `;
         const newInvoiceId = invResult[0].id;
@@ -585,7 +753,7 @@ export async function createInvoice(invoice: Invoice) {
         for (const item of itemsToInsert) {
             await sql`
                 INSERT INTO invoice_items (invoice_id, product_id, description, quantity, price, discount, vat_rate)
-                VALUES (${item.invoice_id}, ${item.product_id}, ${item.description}, ${item.quantity}, ${item.price}, ${item.discount}, ${item.vat_rate})
+                VALUES (${item.invoice_id}, ${item.product_id || null}, ${item.description}, ${item.quantity}, ${item.price}, ${item.discount || 0}, ${item.vat_rate || 0})
             `;
         }
 
@@ -600,6 +768,14 @@ export async function createInvoice(invoice: Invoice) {
                 });
             }
         }
+
+        await logAudit({
+            action: 'CREATE',
+            entityType: 'INVOICE',
+            entityId: newInvoiceId.toString(),
+            details: `สร้างใบแจ้งหนี้ #${invoice.number} ยอดสุทธิ ฿${invoice.grandTotal}`,
+            newData: invoice
+        });
         return newInvoiceId;
     }
 
@@ -662,7 +838,13 @@ export async function createInvoice(invoice: Invoice) {
             });
         }
     }
-
+    await logAudit({
+        action: 'CREATE',
+        entityType: 'INVOICE',
+        entityId: newInvoiceId.toString(),
+        details: `สร้างใบแจ้งหนี้ #${invoice.number} ยอดสุทธิ ฿${invoice.grandTotal}`,
+        newData: invoice
+    });
     return newInvoiceId;
 }
 
@@ -670,7 +852,7 @@ export async function recordStockMovement(movement: Partial<StockMovement>) {
     if (USE_LOCAL) {
         await sql`
             INSERT INTO stock_movements (product_id, type, quantity, reference_id, notes)
-            VALUES (${movement.productId}, ${movement.type}, ${movement.quantity}, ${movement.referenceId}, ${movement.notes})
+            VALUES (${movement.productId || null}, ${movement.type || 'adjustment'}, ${movement.quantity || 0}, ${movement.referenceId || null}, ${movement.notes || null})
         `;
 
         const multiplier = movement.type === 'in' ? 1 : (movement.type === 'out' ? -1 : 0);
@@ -678,7 +860,7 @@ export async function recordStockMovement(movement: Partial<StockMovement>) {
             await sql`
                 UPDATE products 
                 SET stock_quantity = stock_quantity + ${Number(movement.quantity) * multiplier}
-                WHERE id = ${movement.productId}
+                WHERE id = ${movement.productId || null}
             `;
         }
         return;
@@ -1033,7 +1215,7 @@ export async function convertQuotationToInvoice(quotationId: string) {
 
         const invResult = await sql`
             INSERT INTO invoices (number, date, due_date, customer_id, customer_name, customer_address, customer_tax_id, subtotal, discount_total, vat_total, grand_total, status, quotation_id)
-            VALUES (${invoiceNumber}, ${new Date()}, ${new Date(new Date().setDate(new Date().getDate() + 30))}, ${quotation.customerId}, ${quotation.customerName}, ${quotation.customerAddress}, ${quotation.customerTaxId}, ${quotation.subtotal}, ${quotation.discountTotal}, ${quotation.vatTotal}, ${quotation.grandTotal}, 'issued', ${quotationId})
+            VALUES (${invoiceNumber}, ${new Date()}, ${new Date(new Date().setDate(new Date().getDate() + 30))}, ${quotation.customerId}, ${quotation.customerName}, ${quotation.customerAddress || null}, ${quotation.customerTaxId || null}, ${quotation.subtotal}, ${quotation.discountTotal}, ${quotation.vatTotal}, ${quotation.grandTotal}, 'issued', ${quotationId})
             RETURNING id
         `;
         const newInvoiceId = invResult[0].id;
@@ -1041,7 +1223,7 @@ export async function convertQuotationToInvoice(quotationId: string) {
         for (const item of quotation.items) {
             await sql`
                 INSERT INTO invoice_items (invoice_id, product_id, description, quantity, price, discount, vat_rate)
-                VALUES (${newInvoiceId}, ${item.productId}, ${item.description}, ${item.quantity}, ${item.price}, ${item.discount}, ${item.vatRate})
+                VALUES (${newInvoiceId}, ${item.productId || null}, ${item.description}, ${item.quantity}, ${item.price}, ${item.discount || 0}, ${item.vatRate || 0})
             `;
 
             if (item.productId) {
@@ -1172,6 +1354,10 @@ export async function updateSetting(key: string, value: string) {
         return;
     }
 
+    const { error } = await supabase
+        .from('settings')
+        .upsert({ key, value, updated_at: new Date() });
+
     if (error) throw error;
 }
 
@@ -1276,7 +1462,7 @@ export async function createAnnouncement(announcement: Partial<Announcement>) {
 
         const result = await sql`
             INSERT INTO announcements (title, content, is_active, author_id)
-            VALUES (${announcement.title}, ${announcement.content}, true, ${adminId})
+            VALUES (${announcement.title || ''}, ${announcement.content || ''}, true, ${adminId})
             RETURNING *
         `;
         return result[0];
@@ -1310,6 +1496,47 @@ export async function deleteAnnouncement(id: string) {
         .eq('id', id);
 
     if (error) throw error;
+}
+
+// --- Audit Logs ---
+export async function logAudit(params: {
+    action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN';
+    entityType: 'INVOICE' | 'EXPENSE' | 'PRODUCT' | 'CUSTOMER' | 'SYSTEM';
+    entityId: string;
+    details?: string;
+    oldData?: any;
+    newData?: any;
+    userId?: string;
+}) {
+    try {
+        if (USE_LOCAL) {
+            await sql`
+                INSERT INTO audit_logs (action, entity_type, entity_id, details, old_data, new_data, user_id)
+                VALUES (${params.action}, ${params.entityType}, ${params.entityId}, ${params.details || null}, ${params.oldData || null}, ${params.newData || null}, ${params.userId || null})
+            `;
+            return;
+        }
+
+        await supabase.from('audit_logs').insert([{
+            action: params.action,
+            entity_type: params.entityType,
+            entity_id: params.entityId,
+            details: params.details,
+            old_data: params.oldData,
+            new_data: params.newData,
+            user_id: params.userId
+        }]);
+    } catch (e) {
+        console.error("Audit log failed", e);
+    }
+}
+
+export async function getAuditLogs() {
+    if (USE_LOCAL) {
+        return await sql`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 500`;
+    }
+    const { data } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(500);
+    return data;
 }
 
 // --- Backup & Restore ---

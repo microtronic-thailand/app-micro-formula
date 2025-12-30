@@ -56,7 +56,7 @@ export function ProductDialog({ onSuccess }: ProductDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<z.infer<typeof productSchema>>({
-        resolver: zodResolver(productSchema),
+        resolver: zodResolver(productSchema) as any,
         defaultValues: {
             name: "",
             sku: "",

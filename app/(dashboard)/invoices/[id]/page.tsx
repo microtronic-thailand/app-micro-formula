@@ -22,7 +22,7 @@ export default function InvoiceDetailPage() {
     const componentRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-        content: () => componentRef.current,
+        contentRef: componentRef,
         documentTitle: `${docMode === 'receipt' ? 'Receipt' : 'Invoice'}-${invoice?.number}`,
     });
 

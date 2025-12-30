@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     vat_total NUMERIC(15, 2) NOT NULL DEFAULT 0,
     grand_total NUMERIC(15, 2) NOT NULL DEFAULT 0,
     wht_total NUMERIC(15, 2) DEFAULT 0,
+    is_reconciled BOOLEAN DEFAULT false,
     owner_id UUID REFERENCES profiles(id)
 );
 
@@ -121,6 +122,10 @@ CREATE TABLE IF NOT EXISTS expenses (
     category TEXT DEFAULT 'general',
     date DATE NOT NULL,
     recipient TEXT,
+    receipt_url TEXT, -- Link to bill image/pdf
+    payment_status TEXT DEFAULT 'paid', -- 'pending', 'paid', 'cancelled'
+    is_reconciled BOOLEAN DEFAULT false, -- Check against bank statement
+    wht_amount NUMERIC(15, 2) DEFAULT 0, -- Withholding Taxหัก ณ ที่จ่าย
     owner_id UUID REFERENCES profiles(id)
 );
 
@@ -163,6 +168,18 @@ BEGIN
   WHERE id = row_id;
 END;
 $$ LANGUAGE plpgsql;
+-- 12. Audit Logs Table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    user_id UUID REFERENCES profiles(id),
+    action TEXT NOT NULL, -- 'CREATE', 'UPDATE', 'DELETE'
+    entity_type TEXT NOT NULL, -- 'INVOICE', 'EXPENSE', 'PRODUCT', 'CUSTOMER'
+    entity_id TEXT NOT NULL,
+    details TEXT,
+    old_data JSONB,
+    new_data JSONB
+);
 
 -- Initial Data
 INSERT INTO profiles (email, role) VALUES ('admin@local', 'super_admin') ON CONFLICT DO NOTHING;

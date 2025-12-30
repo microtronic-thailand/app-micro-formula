@@ -126,6 +126,9 @@ export type Expense = {
     category?: string;
     recipient?: string;
     receiptUrl?: string;
+    paymentStatus?: 'pending' | 'paid' | 'cancelled';
+    isReconciled?: boolean;
+    whtAmount?: number;
     userId?: string;
     createdAt: Date;
 };

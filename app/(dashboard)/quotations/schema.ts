@@ -2,12 +2,8 @@ import * as z from "zod";
 
 export const quotationSchema = z.object({
     number: z.string().min(1, "กรุณากรอกเลขที่เอกสาร"),
-    date: z.date({
-        required_error: "กรุณาเลือกวันที่เอกสาร",
-    }),
-    dueDate: z.date({
-        required_error: "กรุณาเลือกวันครบกำหนด",
-    }),
+    date: z.date(),
+    dueDate: z.date(),
     customerId: z.string().min(1, "กรุณาเลือกลูกค้า"),
     items: z.array(z.object({
         id: z.string(),

@@ -24,7 +24,7 @@ export default function QuotationDetailPage() {
     const componentRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-        content: () => componentRef.current,
+        contentRef: componentRef,
         documentTitle: `Quotation-${quotation?.number}`,
     });
 

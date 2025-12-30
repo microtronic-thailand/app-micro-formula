@@ -75,7 +75,7 @@ export default function CreateQuotationPage() {
     const nextQuotationNumber = `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
     const form = useForm<QuotationFormValues>({
-        resolver: zodResolver(quotationSchema),
+        resolver: zodResolver(quotationSchema) as any,
         defaultValues: {
             number: nextQuotationNumber,
             date: new Date(),

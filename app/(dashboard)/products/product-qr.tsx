@@ -23,7 +23,7 @@ export function ProductQRCode({ product }: ProductQRCodeProps) {
     const componentRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-        content: () => componentRef.current,
+        contentRef: componentRef,
         documentTitle: `Label-${product.sku || product.name}`,
     });
 

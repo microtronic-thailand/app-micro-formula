@@ -10,6 +10,7 @@ import {
     Settings,
     PieChart,
     LogOut,
+    History,
     Shield,
     Database,
     BookOpen,
@@ -120,6 +121,15 @@ export function Sidebar() {
                                 >
                                     <Database size={20} className="text-blue-400" />
                                     สำรอง/กู้คืน (Backup)
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    href="/admin/logs"
+                                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                                >
+                                    <History size={20} className="text-purple-400" />
+                                    ประวัติการใช้งาน (Audit Trail)
                                 </Link>
                             </li>
                         </>
