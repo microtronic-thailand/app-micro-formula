@@ -26,7 +26,7 @@ export function Sidebar() {
         <div className="flex h-screen w-64 flex-col border-r bg-slate-900 text-white">
             <div className="flex h-14 items-center border-b border-slate-700 px-6">
                 <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-                    <span className="text-blue-400">Micro</span>Account
+                    <span className="text-blue-400">Micro</span>Formula
                 </Link>
             </div>
             <nav className="flex-1 overflow-y-auto py-4">

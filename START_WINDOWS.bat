@@ -1,6 +1,6 @@
 @echo off
 echo ======================================================
-echo    MicroAccount - Starting System...
+echo    MicroFormula - Starting System...
 echo ======================================================
 
 :: Check for Docker

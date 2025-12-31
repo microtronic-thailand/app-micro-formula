@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "======================================================"
-echo "   MicroAccount - Starting System (Linux/Ubuntu)..."
+echo "   MicroFormula - Starting System (Linux/Ubuntu)..."
 echo "======================================================"
 
 # Check for Docker

@@ -34,7 +34,7 @@ export function Header({ onMobileMenuClick }: HeaderProps) {
         getAnnouncements().then(setAnnouncements).catch(console.error);
     }, []);
 
-    const companyName = settings.company_name || 'Microtronic Account';
+    const companyName = settings.company_name || 'MicroFormula';
     const logoUrl = settings.company_logo_url;
 
     return (
@@ -51,7 +51,7 @@ export function Header({ onMobileMenuClick }: HeaderProps) {
                 {logoUrl ? (
                     <img src={logoUrl} alt="Logo" className="h-8 w-8 object-contain" />
                 ) : (
-                    <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-xs">MA</div>
+                    <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-xs">MF</div>
                 )}
                 <div className="font-bold text-slate-700 hidden sm:block">{companyName}</div>
                 <div className="h-4 w-px bg-slate-200 mx-2 hidden sm:block" />

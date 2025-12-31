@@ -33,7 +33,7 @@ export default function Home() {
           <div className="mx-auto h-20 w-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-lg">
             M
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">MicroAccount</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">MicroFormula</h1>
           <p className="text-slate-500 font-medium italic">ระบบบริหารจัดการบัญชีระดับองค์กร</p>
         </div>
 
@@ -42,7 +42,7 @@ export default function Home() {
         </div>
 
         <div className="text-center text-slate-400 text-sm">
-          © {new Date().getFullYear()} Power by Microtronic Thailand
+          © {new Date().getFullYear()} Power by microtronic.biz
         </div>
       </div>
     </div>

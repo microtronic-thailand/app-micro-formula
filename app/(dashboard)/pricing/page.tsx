@@ -9,7 +9,7 @@ export default function PricingPage() {
     const plans = [
         {
             name: "Standard (เริ่มต้น)",
-            price: "15,000.-",
+            price: "30,000.-",
             description: "สำหรับผู้ที่ต้องการติดตั้งและดูแลเอง",
             features: [
                 "ซื้อขาดได้ Source Code 100%",
@@ -23,7 +23,7 @@ export default function PricingPage() {
         },
         {
             name: "Professional",
-            price: "25,000.-",
+            price: "50,000.-",
             description: "พร้อมใช้งานทันที มีคนดูแล",
             features: [
                 "Software ครบทุกโมดูล",
@@ -38,7 +38,7 @@ export default function PricingPage() {
         },
         {
             name: "Enterprise",
-            price: "60,000.-",
+            price: "80,000.-",
             description: "ดูแลครบวงจร ตลอดทั้งปี",
             features: [
                 "Software + ติดตั้ง + ปรับแก้",

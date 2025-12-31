@@ -208,7 +208,7 @@ export default function FinancialReportPage() {
                             <p className="text-slate-500 text-lg">ประจำเดือน {monthNames[selectedMonth]} {selectedYear}</p>
                         </div>
                         <div className="text-right">
-                            <p className="font-bold text-blue-600">MicroAccount System</p>
+                            <p className="font-bold text-blue-600">MicroFormula System</p>
                             <p className="text-sm text-slate-400 font-medium">วันที่ออกรายงาน: {format(new Date(), "d MMMM yyyy HH:mm", { locale: th })}</p>
                         </div>
                     </div>
